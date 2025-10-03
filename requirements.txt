@@ -1,0 +1,14 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+selenium==4.15.2
+beautifulsoup4==4.12.2
+requests==2.31.0
+webdriver-manager==4.0.1
+lxml==4.9.3
+python-dotenv==1.0.0
+
+# Optional: For PostgreSQL instead of SQLite
+# psycopg2-binary==2.9.9
+
+# Optional: For production deployment
+# gunicorn==21.2.0

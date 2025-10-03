@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Data Fetcher</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1c119f 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, rgb(12, 35, 140) 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #2b3c8c 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #57109d 0%, #3854cf 100%);
+        }
+        .result-section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .judgment-item {
+            padding: 10px;
+            border-left: 3px solid #27377d;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .tab-pane {
+            padding: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="text-center mb-4">
+            <h1 class="text-white"><i class="fas fa-gavel"></i> Court Data Fetcher</h1>
+            <p class="text-white">Fetch case details, judgments, and cause lists from Indian Courts</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="case-tab" data-bs-toggle="tab" data-bs-target="#case-search" type="button">
+                            <i class="fas fa-search"></i> Case Search
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="causelist-tab" data-bs-toggle="tab" data-bs-target="#causelist" type="button">
+                            <i class="fas fa-list"></i> Cause List
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="mainTabContent">
+                    <!-- Case Search Tab -->
+                    <div class="tab-pane fade show active" id="case-search" role="tabpanel">
+                        <form id="caseForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Court Type</label>
+                                    <select class="form-select" id="courtType" required>
+                                        <option value="high_court">High Court</option>
+                                        <option value="district_court">District Court</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Court Name</label>
+                                    <select class="form-select" id="courtName" required>
+                                        <option value="Delhi">Delhi</option>
+                                        <option value="Mumbai">Mumbai</option>
+                                        <option value="Kolkata">Kolkata</option>
+                                        <option value="Chennai">Chennai</option>
+                                        <option value="Bangalore">Bangalore</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Case Type</label>
+                                    <input type="text" class="form-control" id="caseType" placeholder="e.g., CS, CRL, WP" required>
+                                    <small class="text-muted">Civil Suit, Criminal, Writ Petition, etc.</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Case Number</label>
+                                    <input type="text" class="form-control" id="caseNumber" placeholder="e.g., 12345" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Year</label>
+                                    <input type="number" class="form-control" id="year" placeholder="e.g., 2024" min="1950" max="2025" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-search"></i> Fetch Case Details
+                            </button>
+                        </form>
+
+                        <div class="loading" id="loading">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Fetching case details...</p>
+                        </div>
+
+                        <div class="result-section" id="results">
+                            <hr class="my-4">
+                            <h4><i class="fas fa-file-alt"></i> Case Details</h4>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <strong>Petitioner/Plaintiff:</strong>
+                                    <p id="petitioner" class="text-muted">-</p>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong>Respondent/Defendant:</strong>
+                                    <p id="respondent" class="text-muted">-</p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <strong>Filing Date:</strong>
+                                    <p id="filingDate" class="text-muted">-</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <strong>Next Hearing:</strong>
+                                    <p id="nextHearing" class="text-muted">-</p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <strong>Status:</strong>
+                                    <p id="caseStatus" class="text-muted">-</p>
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4"><i class="fas fa-file-pdf"></i> Judgments & Orders</h5>
+                            <div id="judgmentsList"></div>
+                        </div>
+
+                        <div class="alert alert-danger" id="errorAlert" style="display:none;"></div>
+                    </div>
+
+                    <!-- Cause List Tab -->
+                    <div class="tab-pane fade" id="causelist" role="tabpanel">
+                        <form id="causeListForm">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Court Type</label>
+                                    <select class="form-select" id="clCourtType" required>
+                                        <option value="high_court">High Court</option>
+                                        <option value="district_court">District Court</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Court Name</label>
+                                    <select class="form-select" id="clCourtName" required>
+                                        <option value="Delhi">Delhi</option>
+                                        <option value="Mumbai">Mumbai</option>
+                                        <option value="Kolkata">Kolkata</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="clDate" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <i class="fas fa-calendar"></i> Fetch Cause List
+                            </button>
+                        </form>
+
+                        <div class="loading" id="clLoading">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Fetching cause list...</p>
+                        </div>
+
+                        <div class="result-section" id="clResults">
+                            <hr class="my-4">
+                            <h4><i class="fas fa-list"></i> Cases Listed</h4>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Case Number</th>
+                                            <th>Parties</th>
+                                            <th>Court Room</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div class="tab-pane fade" id="history" role="tabpanel">
+                        <h4><i class="fas fa-history"></i> Recent Searches</h4>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Case Type</th>
+                                        <th>Case Number</th>
+                                        <th>Year</th>
+                                        <th>Court</th>
+                                        <th>Query Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Set today's date for cause list
+        document.getElementById('clDate').valueAsDate = new Date();
+
+        // Case Search Form Handler
+        document.getElementById('caseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                case_type: document.getElementById('caseType').value,
+                case_number: document.getElementById('caseNumber').value,
+                year: document.getElementById('year').value,
+                court_type: document.getElementById('courtType').value,
+                court_name: document.getElementById('courtName').value
+            };
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/fetch-case', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.status === 'error') {
+                    document.getElementById('errorAlert').textContent = data.message || 'Error fetching case details';
+                    document.getElementById('errorAlert').style.display = 'block';
+                    return;
+                }
+
+                displayCaseDetails(data);
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('errorAlert').textContent = 'Network error: ' + error.message;
+                document.getElementById('errorAlert').style.display = 'block';
+            }
+        });
+
+        function displayCaseDetails(data) {
+            const parsed = data.parsed_data;
+            
+            document.getElementById('petitioner').textContent = parsed.petitioner || 'Not available';
+            document.getElementById('respondent').textContent = parsed.respondent || 'Not available';
+            document.getElementById('filingDate').textContent = parsed.filing_date || 'Not available';
+            document.getElementById('nextHearing').textContent = parsed.next_hearing || 'Not available';
+            document.getElementById('caseStatus').textContent = parsed.case_status || 'Not available';
+
+            const judgmentsList = document.getElementById('judgmentsList');
+            judgmentsList.innerHTML = '';
+
+            if (parsed.judgments && parsed.judgments.length > 0) {
+                parsed.judgments.forEach((judgment, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'judgment-item';
+                    div.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-file-pdf text-danger"></i> ${judgment.text}</span>
+                            <button class="btn btn-sm btn-primary" onclick="downloadJudgment('${judgment.url}', ${data.query_id})">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </div>
+                    `;
+                    judgmentsList.appendChild(div);
+                });
+            } else {
+                judgmentsList.innerHTML = '<p class="text-muted">No judgments/orders available</p>';
+            }
+
+            document.getElementById('results').style.display = 'block';
+        }
+
+        async function downloadJudgment(url, queryId) {
+            try {
+                const response = await fetch('/api/download-judgment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ judgment_url: url, query_id: queryId })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = `judgment_${queryId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
+                } else {
+                    alert('Failed to download judgment');
+                }
+            } catch (error) {
+                alert('Error downloading judgment: ' + error.message);
+            }
+        }
+
+        // Cause List Form Handler
+        document.getElementById('causeListForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                court_type: document.getElementById('clCourtType').value,
+                court_name: document.getElementById('clCourtName').value,
+                date: document.getElementById('clDate').value
+            };
+
+            document.getElementById('clLoading').style.display = 'block';
+            document.getElementById('clResults').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/fetch-causelist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                document.getElementById('clLoading').style.display = 'none';
+
+                if (data.status === 'success') {
+                    displayCauseList(data.cases);
+                } else {
+                    alert('Error fetching cause list: ' + data.message);
+                }
+            } catch (error) {
+                document.getElementById('clLoading').style.display = 'none';
+                alert('Network error: ' + error.message);
+            }
+        });
+
+        function displayCauseList(cases) {
+            const tbody = document.getElementById('clTableBody');
+            tbody.innerHTML = '';
+
+            if (cases && cases.length > 0) {
+                cases.forEach(c => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${c.case_number}</td>
+                        <td>${c.parties}</td>
+                        <td>${c.court_room}</td>
+                        <td>${c.time}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No cases listed</td></tr>';
+            }
+
+            document.getElementById('clResults').style.display = 'block';
+        }
+
+        // Load history when tab is clicked
+        document.getElementById('history-tab').addEventListener('click', loadHistory);
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('historyTableBody');
+                tbody.innerHTML = '';
+
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.case_type}</td>
+                            <td>${item.case_number}</td>
+                            <td>${item.year}</td>
+                            <td>${item.court_name}</td>
+                            <td>${new Date(item.query_time).toLocaleString()}</td>
+                            <td><span class="badge bg-${item.status === 'success' ? 'success' : 'danger'}">${item.status}</span></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No search history</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+    </script>
+</body>
+</html>
