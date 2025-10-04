@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
@@ -23,8 +24,18 @@ class CourtScraper:
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        self.driver = webdriver.Chrome(options=chrome_options)
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--disable-extensions')
+    
+        # For cloud environments
+        chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN", None)
+    
+        try:
+            self.driver = webdriver.Chrome(options=chrome_options)
+        except Exception as e:
+            print(f"Error initializing Chrome driver: {e}")
+            print("Make sure Chrome and ChromeDriver are installed and accessible.")
     
     def fetch_case_details(self, case_type, case_number, year, court_type='high_court', court_name='Delhi'):
         """
