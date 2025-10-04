@@ -32,16 +32,19 @@ A web application to fetch case details, download judgments, and view cause list
 ## Project Structure
 
 ```
-court-data-fetcher/
-├── app.py                 # Main Flask application
-├── scraper.py            # Court scraper module
+illegally-blonde/
+├── app.py (updated with PORT)
+├── scraper.py (updated with cloud settings)
+├── config.py
+├── utils.py
+├── setup.py
+├── requirements.txt (with gunicorn)
+├── render.yaml (new)
+├── build.sh (optional)
 ├── templates/
-│   └── index.html        # Frontend UI
-├── downloads/            # Downloaded judgments (auto-created)
-├── court_data.db         # SQLite database (auto-created)
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
-└── .env                 # Environment variables (optional)
+│   └── index.html
+├── .gitignore
+└── README.md
 ```
 
 ## Installation & Setup
