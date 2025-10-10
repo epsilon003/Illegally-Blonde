@@ -51,14 +51,10 @@ def fetch_case():
         court_type = data.get('court_type', 'high_court')
         court_name = data.get('court_name', 'Delhi')
         
-        # Validate input
         if not all([case_type, case_number, year]):
-            return jsonify({'error': 'Missing required fields'}), 400
+            return jsonify({'error': 'Missing required fields', 'status': 'error'}), 400
         
-        # Initialize scraper
         scraper = CourtScraper()
-        
-        # Fetch case details
         result = scraper.fetch_case_details(
             case_type=case_type,
             case_number=case_number,
@@ -67,7 +63,7 @@ def fetch_case():
             court_name=court_name
         )
         
-        if result['status'] == 'error':
+        if result.get('status') == 'error':
             return jsonify(result), 400
         
         # Store in database
@@ -88,6 +84,7 @@ def fetch_case():
         return jsonify(result)
         
     except Exception as e:
+        print(f"Error in fetch_case: {str(e)}")
         return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/api/download-judgment', methods=['POST'])
@@ -98,13 +95,12 @@ def download_judgment():
         judgment_url = data.get('judgment_url')
         
         if not judgment_url:
-            return jsonify({'error': 'No judgment URL provided'}), 400
+            return jsonify({'error': 'No judgment URL provided', 'status': 'error'}), 400
         
         scraper = CourtScraper()
         file_path = scraper.download_judgment(judgment_url, query_id)
         
         if file_path and os.path.exists(file_path):
-            # Store in database
             conn = sqlite3.connect('court_data.db')
             c = conn.cursor()
             c.execute('''INSERT INTO judgments 
@@ -117,10 +113,11 @@ def download_judgment():
             
             return send_file(file_path, as_attachment=True)
         else:
-            return jsonify({'error': 'Failed to download judgment'}), 500
+            return jsonify({'error': 'Failed to download judgment', 'status': 'error'}), 500
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error in download_judgment: {str(e)}")
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/api/fetch-causelist', methods=['POST'])
 def fetch_causelist():
@@ -130,13 +127,31 @@ def fetch_causelist():
         court_name = data.get('court_name', 'Delhi')
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         
+        print(f"Fetching causelist: {court_type}, {court_name}, {date}")  # Debug
+        
         scraper = CourtScraper()
         result = scraper.fetch_causelist(court_type, court_name, date)
+        
+        # Ensure result is valid
+        if result is None:
+            result = {
+                'status': 'error',
+                'message': 'No data returned from scraper',
+                'cases': []
+            }
+        
+        if 'status' not in result:
+            result['status'] = 'error'
+        if 'cases' not in result:
+            result['cases'] = []
+        
+        print(f"Causelist result: {result}")  # Debug
         
         return jsonify(result)
         
     except Exception as e:
-        return jsonify({'error': str(e), 'status': 'error'}), 500
+        print(f"Error in fetch_causelist: {str(e)}")
+        return jsonify({'error': str(e), 'status': 'error', 'cases': []}), 500
 
 @app.route('/api/courts')
 def get_courts():
@@ -156,29 +171,33 @@ def get_courts():
 @app.route('/api/history')
 def get_history():
     """Get query history"""
-    conn = sqlite3.connect('court_data.db')
-    c = conn.cursor()
-    c.execute('''SELECT id, case_type, case_number, year, court_name, 
-                        query_time, status 
-                 FROM queries 
-                 ORDER BY query_time DESC LIMIT 50''')
-    rows = c.fetchall()
-    conn.close()
-    
-    history = []
-    for row in rows:
-        history.append({
-            'id': row[0],
-            'case_type': row[1],
-            'case_number': row[2],
-            'year': row[3],
-            'court_name': row[4],
-            'query_time': row[5],
-            'status': row[6]
-        })
-    
-    return jsonify(history)
+    try:
+        conn = sqlite3.connect('court_data.db')
+        c = conn.cursor()
+        c.execute('''SELECT id, case_type, case_number, year, court_name, 
+                            query_time, status 
+                     FROM queries 
+                     ORDER BY query_time DESC LIMIT 50''')
+        rows = c.fetchall()
+        conn.close()
+        
+        history = []
+        for row in rows:
+            history.append({
+                'id': row[0],
+                'case_type': row[1],
+                'case_number': row[2],
+                'year': row[3],
+                'court_name': row[4],
+                'query_time': row[5],
+                'status': row[6]
+            })
+        
+        return jsonify(history)
+    except Exception as e:
+        print(f"Error in get_history: {str(e)}")
+        return jsonify([])
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)

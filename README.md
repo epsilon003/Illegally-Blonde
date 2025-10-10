@@ -276,6 +276,60 @@ Contributions are welcome! Please:
 3. Make your changes
 4. Submit a pull request
 
+## Implementation Notes
+
+### Demo Mode vs Production Mode
+
+This application currently runs in **demo mode** with realistic mock data to demonstrate the complete workflow and UI/UX.
+
+#### Why Mock Data?
+
+The eCourts portal (https://ecourts.gov.in) implements several security measures:
+
+1. **CAPTCHA Protection** - Required for most searches
+2. **Anti-Bot Detection** - Blocks automated Selenium browsers
+3. **Session Management** - Complex cookie/session requirements
+4. **Rate Limiting** - Aggressive limits on automated requests
+
+#### What This Demo Shows
+
+✅ **Complete UI/UX** - Full user interface with all features
+✅ **Database Integration** - All queries stored in SQLite
+✅ **API Architecture** - RESTful API design
+✅ **Error Handling** - Graceful error management
+✅ **Responsive Design** - Works on all screen sizes
+✅ **Real-time Updates** - Loading states, success/error messages
+
+#### Production Implementation Path
+
+For production deployment with real data, the following would be required:
+
+**Option 1: Official API Access**
+- Request API access from National Informatics Centre (NIC)
+- Use authenticated endpoints
+- No scraping required
+
+**Option 2: Advanced Scraping**
+- CAPTCHA solving service (2Captcha, AntiCaptcha)
+- Residential proxy rotation
+- Advanced browser fingerprinting evasion
+- Session management
+- Human-like delays and behavior
+
+**Option 3: Manual Data Entry**
+- User enters data from eCourts manually
+- App provides structured interface
+- Database stores all entries
+
+#### Test the Demo
+
+Try these example queries:
+- Case Type: `CS`, Number: `12345`, Year: `2023`
+- Case Type: `WP`, Number: `67890`, Year: `2024`
+- Case Type: `CRL`, Number: `11111`, Year: `2024`
+
+Each query generates realistic but different mock data.
+
 ## Legal Disclaimer
 
 This tool is for educational and legitimate purposes only. Users must:
